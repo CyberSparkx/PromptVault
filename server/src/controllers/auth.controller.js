@@ -70,7 +70,58 @@ const loginWithToken = async (req,res) =>{
 }
 
 
+const loginController = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if ((!username && !email) || !password) {
+      return res.status(400).json({ message: "Username/Email and password required" });
+    }
+
+    // Check for existing user by username or email
+    const existingUser = await User.findOne({
+      $or: [{ username }, { email }]
+    });
+
+    if (!existingUser) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Compare password
+    const isPasswordValid = await bcrypt.compare(password, existingUser.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { id: existingUser._id, username: existingUser.username, email: existingUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    // Store token in HTTP-only cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
+    return res.status(200).json({
+      message: "Login successful"
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
   module.exports = {
     registerController,
-    loginWithToken
+    loginWithToken,
+    loginController 
+
   };
