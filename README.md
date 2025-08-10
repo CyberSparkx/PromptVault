@@ -36,7 +36,7 @@ Built for **creators, developers, and marketers** who want a clean, searchable, 
 
 ### 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/YourUsername/promptvault.git
+git clone https://github.com/CyberSparkx/PromptVault.git
 cd promptvault
 # Backend
 cd backend
