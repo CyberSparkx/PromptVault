@@ -12,7 +12,6 @@ Built for **creators, developers, and marketers** who want a clean, searchable, 
 - 🧠 **AI Tagging** – Automatically categorize prompts using Google’s Gemini API.
 - ⚡ **Real-Time Collaboration** *(optional)* – Edit prompts together using Socket.IO.
 - 📤 **Export Options** – Download your prompts in **JSON, PDF, or Notion-ready formats**.
-- 🔒 **Auth.js Authentication** – Secure sign-in with Google, GitHub, or Email.
 - 🎨 **Responsive UI** – Clean and minimal design for desktop and mobile.
 
 ---
