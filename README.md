@@ -35,7 +35,7 @@ Perfect for **creators, developers, and marketers** who want a clean, searchable
 - [Gemini API](https://ai.google.dev/) for AI tagging  
 
 ---
-
+<p align="center"> <img src="https://img.shields.io/badge/Made%20with-MERN-green?style=for-the-badge" /> <img src="https://img.shields.io/badge/Powered%20by-Gemini-blue?style=for-the-badge" /> <img src="https://img.shields.io/badge/Frontend-Vite-orange?style=for-the-badge" /> </p> 
 ## 📦 Installation
 
 ### 1️⃣ Clone the repository
@@ -80,4 +80,3 @@ npm run dev
 🤝 Contributing
 We welcome contributions!
 Fork the repository, create a feature branch, commit your changes, and submit a pull request.
-<p align="center"> <img src="https://img.shields.io/badge/Made%20with-MERN-green?style=for-the-badge" /> <img src="https://img.shields.io/badge/Powered%20by-Gemini-blue?style=for-the-badge" /> <img src="https://img.shields.io/badge/Frontend-Vite-orange?style=for-the-badge" /> </p> ```
