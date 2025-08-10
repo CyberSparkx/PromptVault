@@ -3,10 +3,11 @@ const app = express()
 const connectDB = require('./src/db/db')
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
-const registerRoute = require('./src/routes/auth.route')
+const {registerRoute,loginRoute} = require('./src/routes/auth.route')
 
 connectDB();
 app.use(express.json())
+app.use(cookieParser());
 
 
 // Routes
@@ -17,6 +18,7 @@ app.get('/', (req,res)=>{
 })
 
 app.use('/api/auth/',registerRoute);
+app.use('/api/auth/',loginRoute);
 
 
 
