@@ -1,11 +1,9 @@
 {
-  "name": "backend",
+  "name": "server",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "dev":"npx nodemon server.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
@@ -13,7 +11,6 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookieparser": "^0.1.0",
-    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1"
