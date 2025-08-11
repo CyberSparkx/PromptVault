@@ -4,6 +4,7 @@ const connectDB = require('./src/db/db')
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const {registerRoute,loginRoute} = require('./src/routes/auth.route')
+const projectCreaterRoute = require('./src/routes/projects.route')
 
 connectDB();
 app.use(express.json())
@@ -19,6 +20,7 @@ app.get('/', (req,res)=>{
 
 app.use('/api/auth/',registerRoute);
 app.use('/api/auth/',loginRoute);
+app.use('/api/',projectCreaterRoute)
 
 
 
