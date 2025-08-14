@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
 @import "remixicon/fonts/remixicon.css";
 @import "tailwindcss";
 
@@ -14,4 +15,98 @@ body {
 
 body::-webkit-scrollbar {
 	display: none; /* Chrome, Safari */
+}
+.scrollbar-hide {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	display: none; /* Chrome, Safari, Opera */
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("/src/assets/fonts/CabinetGrotesk/CabinetGrotesk-Thin.woff2")
+		format("woff2");
+	font-weight: 100;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Extralight.woff2")
+		format("woff2");
+	font-weight: 200;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Light.woff2")
+		format("woff2");
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Regular.woff2")
+		format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Medium.woff2")
+		format("woff2");
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Bold.woff2")
+		format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Extrabold.woff2")
+		format("woff2");
+	font-weight: 800;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Cabinet Grotesk";
+	src: url("./assets/fonts/CabinetGrotesk/CabinetGrotesk-Black.woff2")
+		format("woff2");
+	font-weight: 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+@theme {
+	--font-poppins: "Poppins", sans-serif;
+	--font-cabinet: "Cabinet Grotesk", sans-serif;
+	--color-white-1: #f8f9fa; /* seasalt */
+	--color-white-2: #e9ecef; /* antiflash-white */
+	--color-gray-1: #dee2e6; /* platinum */
+	--color-gray-2: #ced4da; /* french-gray */
+	--color-gray-3: #adb5bd; /* french-gray-2 */
+	--color-gray-4: #6c757d; /* slate-gray */
+	--color-gray-5: #495057; /* outer-space */
+	--color-gray-6: #343a40; /* onyx */
+	--color-black-1: #212529; /* eerie-black */
 }
