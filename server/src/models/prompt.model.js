@@ -10,12 +10,16 @@ const promptSchema = new mongoose.Schema({
     required: true
   },
   tags: {
-    type: [String], // array of tags
+    type: [String],
     default: []
   },
   isCommunity: {
-    type: Boolean, // true if for community
+    type: Boolean, 
     default: false
+  },
+  username: {
+    type: String,   
+    required: true  
   },
   date: {
     type: Date,

@@ -1,6 +1,7 @@
 const User = require("../models/user.model");
 const Prompt = require("../models/prompt.model");
 const { model } = require("mongoose");
+const aiTagGenerator = require('../service/ai.service')
 
 const savePrompt = async (req, res) => {
 	try {
@@ -11,25 +12,32 @@ const savePrompt = async (req, res) => {
 			return res.status(400).json({ message: "Title and prompt are required" });
 		}
 
-		// 1 Create the new prompt
-		const newPrompt = await Prompt.create({
-			title,
-			prompt,
-			tags: tags || [],
-			isCommunity: Boolean(isCommunity),
-			date: new Date(),
-		});
-
-		// 2 Find the user
+		// 1 Find the user first
 		const user = await User.findById(userId).populate("projects");
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
 		}
 
-		// Add prompt to the user's prompts list
+
+		//AI TAg Generate 
+		const AItags = await aiTagGenerator(prompt);
+
+		if(!AItags) return res.status(401).json({message:"Ai is unable to generate the code"})
+
+		// 2 Create the new prompt with username
+		const newPrompt = await Prompt.create({
+			title,
+			prompt,
+			tags: AItags || [],
+			isCommunity: Boolean(isCommunity),
+			username: user.username, // 👈 store the username from the user model
+			date: new Date(),
+		});
+
+		// 3 Add prompt to the user's prompts list
 		user.prompts.push(newPrompt._id);
 
-		// 3 If projectId provided, validate it belongs to the user
+		// 4 If projectId provided, validate it belongs to the user
 		if (projectId) {
 			const project = user.projects.find(
 				(p) => p._id.toString() === projectId.toString(),
@@ -45,10 +53,10 @@ const savePrompt = async (req, res) => {
 			await project.save();
 		}
 
-		// 4 Save updated user
+		// 5 Save updated user
 		await user.save();
 
-		// 5 Respond
+		// 6 Respond
 		res.status(201).json({
 			message: "Prompt created successfully",
 			prompt: newPrompt,
@@ -58,6 +66,7 @@ const savePrompt = async (req, res) => {
 		res.status(500).json({ message: "Server not responding" });
 	}
 };
+
 
 const getPrompt = async (req, res) => {
 	try {
