@@ -23,9 +23,8 @@ app.use("/api/auth/", registerRoute);
 app.use("/api/auth/", loginRoute);
 app.use("/api/", projectCreaterRoute);
 app.use("/api/", promptRoute);
-app.use("/api/export/", exportRoute);
+app.use("/api/prompts/", exportRoute);
 
 app.listen(3000, () => {
 	console.log("The Server is running on port 3000");
 });
-

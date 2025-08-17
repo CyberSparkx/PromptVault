@@ -1,15 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const { exportPdf, exportJson } = require("../controllers/export.controller");
+const {
+	exportPromptPdf,
+	exportPromptJson,
+	exportPdf,
+	exportJson,
+} = require("../controllers/export.controller");
 const verifyToken = require("../middleware/authenticator.middleware");
 
-// Export prompts as PDF
+// Single prompt PDF/JSON export
+router.get("/export/pdf", verifyToken, exportPromptPdf);
+router.get("/export/json", verifyToken, exportPromptJson);
+
+// All prompts PDF/JSON export (user-wise)
 router.get("/pdf", verifyToken, exportPdf);
-
-// Export prompts as JSON
 router.get("/json", verifyToken, exportJson);
-
-// Export prompts to Notion
-// router.get("/notion", verifyToken, exportNotion);
 
 module.exports = router;
