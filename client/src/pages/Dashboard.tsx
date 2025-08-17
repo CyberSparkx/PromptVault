@@ -5,16 +5,17 @@ export type PromptItem = {
 	id: string;
 	title: string;
 	prompt: string;
-	tag: string;
+	tags: string[];
 	isCommunity: boolean;
 	createdAt: string;
 	updatedAt?: string;
+	username?: string;
 };
 
 type EditFormValues = {
 	title: string;
 	prompt: string;
-	tag: string;
+	tags: string[];
 	isCommunity: boolean;
 };
 
@@ -40,12 +41,13 @@ function mapServerPromptToItem(p: any): PromptItem {
 		id: p._id,
 		title: p.title,
 		prompt: p.prompt,
-		tag: Array.isArray(p.tags) && p.tags.length ? String(p.tags[0]) : "",
+		tags: Array.isArray(p.tags) ? p.tags.map(String) : [],
 		isCommunity: Boolean(p.isCommunity),
 		createdAt: p.date
 			? new Date(p.date).toISOString()
 			: new Date().toISOString(),
 		updatedAt: p.updatedAt ? new Date(p.updatedAt).toISOString() : undefined,
+		username: p.username,
 	};
 }
 
@@ -75,29 +77,35 @@ const Dashboard = () => {
 	const [loading, setLoading] = useState(false);
 	const [errMsg, setErrMsg] = useState<string>("");
 	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [shareMenuOpen, setShareMenuOpen] = useState<string | null>(null);
 
 	const {
 		register,
 		handleSubmit,
 		reset,
-		formState: { errors, isSubmitting, isDirty },
+		formState: { errors, isSubmitting },
 		setValue,
 		watch,
 	} = useForm<EditFormValues>();
 
 	const watchIsCommunity = watch("isCommunity");
+	const watchTags = watch("tags") || [];
+	const watchTitle = watch("title") || "";
+	const watchPrompt = watch("prompt") || "";
 
-	const sanitizeTag = (raw: string) => {
+	// Tag cleanup utility
+	const sanitizeTag = useCallback((raw: string) => {
 		let cleaned = raw.replace(/\s+/g, "");
 		cleaned = cleaned.replace(/[^a-zA-Z0-9-_]/g, "");
 		return cleaned;
-	};
+	}, []);
 
+	// Derive all tags from prompt list
 	const deriveTags = useCallback((prompts: PromptItem[]) => {
 		const tags = Array.from(
 			new Set(
 				prompts
-					.map((p) => p.tag)
+					.flatMap((p) => p.tags)
 					.filter(Boolean)
 					.map((t) => t.trim()),
 			),
@@ -105,6 +113,7 @@ const Dashboard = () => {
 		setAvailableTags(tags);
 	}, []);
 
+	// Load from localStorage on mount
 	useEffect(() => {
 		try {
 			const rawPrompts = localStorage.getItem(LS_PROMPTS_KEY);
@@ -114,6 +123,7 @@ const Dashboard = () => {
 			if (rawPrompts) {
 				parsedPrompts = JSON.parse(rawPrompts).map((p: any) => ({
 					...p,
+					tags: Array.isArray(p.tags) ? p.tags : [],
 					createdAt: p.createdAt || new Date().toISOString(),
 				}));
 			}
@@ -130,6 +140,7 @@ const Dashboard = () => {
 		}
 	}, [deriveTags]);
 
+	// Fetch from API on mount
 	useEffect(() => {
 		const fetchPrompts = async () => {
 			if (!API_ROOT) {
@@ -164,9 +175,9 @@ const Dashboard = () => {
 				localStorage.setItem(
 					LS_TAGS_KEY,
 					JSON.stringify(
-						Array.from(new Set(mapped.map((p) => p.tag).filter(Boolean))).sort(
-							(a, b) => a.localeCompare(b),
-						),
+						Array.from(
+							new Set(mapped.flatMap((p) => p.tags).filter(Boolean)),
+						).sort((a, b) => a.localeCompare(b)),
 					),
 				);
 			} catch (e: any) {
@@ -177,13 +188,17 @@ const Dashboard = () => {
 		};
 
 		fetchPrompts();
-	}, []);
+	}, [deriveTags]);
 
+	// Listen to localStorage changes
 	useEffect(() => {
 		const handler = (e: StorageEvent) => {
 			if (e.key === LS_PROMPTS_KEY && e.newValue) {
 				try {
-					const parsed: PromptItem[] = JSON.parse(e.newValue);
+					const parsed: PromptItem[] = JSON.parse(e.newValue).map((p: any) => ({
+						...p,
+						tags: Array.isArray(p.tags) ? p.tags : [],
+					}));
 					setAllPrompts(parsed);
 					deriveTags(parsed);
 				} catch {}
@@ -199,22 +214,29 @@ const Dashboard = () => {
 		return () => window.removeEventListener("storage", handler);
 	}, [deriveTags]);
 
-	const persist = (prompts: PromptItem[], tags?: string[]) => {
-		localStorage.setItem(LS_PROMPTS_KEY, JSON.stringify(prompts));
-		setAllPrompts(prompts);
-		if (tags) {
-			localStorage.setItem(LS_TAGS_KEY, JSON.stringify(tags));
-			setAvailableTags(tags);
-		} else {
-			deriveTags(prompts);
-		}
-	};
+	// Persist changes to localStorage and state
+	const persist = useCallback(
+		(prompts: PromptItem[], tags?: string[]) => {
+			localStorage.setItem(LS_PROMPTS_KEY, JSON.stringify(prompts));
+			setAllPrompts(prompts);
+			if (tags) {
+				localStorage.setItem(LS_TAGS_KEY, JSON.stringify(tags));
+				setAvailableTags(tags);
+			} else {
+				deriveTags(prompts);
+			}
+		},
+		[deriveTags],
+	);
 
+	// Filter and sort visible prompts
 	const visiblePrompts = useMemo(() => {
 		let list = [...allPrompts];
 
 		if (selectedTags.length) {
-			list = list.filter((p) => p.tag && selectedTags.includes(p.tag));
+			list = list.filter((p) =>
+				p.tags.some((tag) => selectedTags.includes(tag)),
+			);
 		}
 
 		if (searchQuery.trim()) {
@@ -223,7 +245,7 @@ const Dashboard = () => {
 				(p) =>
 					p.title.toLowerCase().includes(q) ||
 					p.prompt.toLowerCase().includes(q) ||
-					(p.tag && p.tag.toLowerCase().includes(q)),
+					p.tags.some((tag) => tag.toLowerCase().includes(q)),
 			);
 		}
 
@@ -267,30 +289,35 @@ const Dashboard = () => {
 		return list;
 	}, [allPrompts, selectedTags, searchQuery, sortKey]);
 
-	const toggleTag = (tag: string) => {
+	const toggleTag = useCallback((tag: string) => {
 		setSelectedTags((prev) =>
 			prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
 		);
-	};
+	}, []);
 
-	const openEdit = (item: PromptItem) => {
-		setEditingPrompt(item);
-		reset({
-			title: item.title,
-			prompt: item.prompt,
-			tag: item.tag || "",
-			isCommunity: item.isCommunity,
-		});
-		setShowEditModal(true);
-		setAddingTagMode(false);
-		setNewTagInput("");
-		setNewTagError("");
-	};
+	// Open edit modal
+	const openEdit = useCallback(
+		(item: PromptItem) => {
+			setEditingPrompt(item);
+			reset({
+				title: item.title,
+				prompt: item.prompt,
+				tags: item.tags,
+				isCommunity: item.isCommunity,
+			});
+			setShowEditModal(true);
+			setAddingTagMode(false);
+			setNewTagInput("");
+			setNewTagError("");
+		},
+		[reset],
+	);
 
-	const closeEdit = () => {
+	// Close edit modal
+	const closeEdit = useCallback(() => {
 		setShowEditModal(false);
 		setEditingPrompt(null);
-	};
+	}, []);
 
 	useEffect(() => {
 		if (addingTagMode && newTagRef.current) {
@@ -298,26 +325,49 @@ const Dashboard = () => {
 		}
 	}, [addingTagMode]);
 
-	const handleNewTagChange = (val: string) => {
-		const cleaned = sanitizeTag(val);
-		setNewTagInput(cleaned);
-		if (!cleaned) setNewTagError("Tag cannot be empty.");
-		else if (availableTags.includes(cleaned)) setNewTagError("Already exists.");
-		else setNewTagError("");
-	};
+	const handleNewTagChange = useCallback(
+		(val: string) => {
+			const cleaned = sanitizeTag(val);
+			setNewTagInput(cleaned);
+			if (!cleaned) setNewTagError("Tag cannot be empty.");
+			else if (availableTags.includes(cleaned))
+				setNewTagError("Already exists.");
+			else setNewTagError("");
+		},
+		[availableTags, sanitizeTag],
+	);
 
-	const commitNewTag = () => {
+	const commitNewTag = useCallback(() => {
 		if (!newTagInput.trim() || newTagError) return;
 		const t = newTagInput.trim();
 		const updatedTags = [...availableTags, t].sort((a, b) =>
 			a.localeCompare(b),
 		);
-		setValue("tag", t);
+		setValue("tags", [...(watchTags || []), t]);
 		persist(allPrompts, updatedTags);
 		setAddingTagMode(false);
 		setNewTagInput("");
 		setNewTagError("");
-	};
+	}, [
+		newTagInput,
+		newTagError,
+		availableTags,
+		watchTags,
+		persist,
+		allPrompts,
+		setValue,
+	]);
+
+	// Custom dirty check for form
+	const formChanged = useMemo(() => {
+		if (!editingPrompt) return false;
+		return (
+			watchTitle !== editingPrompt.title ||
+			watchPrompt !== editingPrompt.prompt ||
+			watchIsCommunity !== editingPrompt.isCommunity ||
+			JSON.stringify(watchTags) !== JSON.stringify(editingPrompt.tags)
+		);
+	}, [editingPrompt, watchTitle, watchPrompt, watchIsCommunity, watchTags]);
 
 	const onSubmit: SubmitHandler<EditFormValues> = async (data) => {
 		if (!editingPrompt) return;
@@ -330,7 +380,9 @@ const Dashboard = () => {
 			const body: any = {
 				title: data.title.trim(),
 				prompt: data.prompt.trim(),
-				tags: data.tag ? [sanitizeTag(data.tag.trim())] : [], // clear when empty
+				tags: Array.isArray(data.tags)
+					? data.tags.map((t) => sanitizeTag(t.trim())).filter(Boolean)
+					: [],
 				isCommunity: !!data.isCommunity,
 			};
 
@@ -359,7 +411,7 @@ const Dashboard = () => {
 						...editingPrompt,
 						title: body.title,
 						prompt: body.prompt,
-						tag: body.tags[0] || "",
+						tags: body.tags,
 						isCommunity: body.isCommunity,
 						updatedAt: new Date().toISOString(),
 					};
@@ -368,11 +420,11 @@ const Dashboard = () => {
 				p.id === updated.id ? updated : p,
 			);
 			let tags = availableTags;
-			if (updated.tag && !availableTags.includes(updated.tag)) {
-				tags = [...availableTags, updated.tag].sort((a, b) =>
-					a.localeCompare(b),
-				);
-			}
+			body.tags.forEach((tag: string) => {
+				if (tag && !tags.includes(tag)) {
+					tags = [...tags, tag].sort((a, b) => a.localeCompare(b));
+				}
+			});
 			persist(updatedList, tags);
 			closeEdit();
 		} catch (e: any) {
@@ -419,9 +471,46 @@ const Dashboard = () => {
 		} catch {}
 	};
 
+	const handleShare = (id: string) => setShareMenuOpen(id);
+
+	const handleExport = async (item: PromptItem, format: "pdf" | "json") => {
+		const url = `${API_ROOT}/prompts/export/${format}?id=${item.id}`;
+		try {
+			const res = await fetch(url, {
+				method: "GET",
+				credentials: "include",
+			});
+			if (!res.ok) return alert("Export failed!");
+
+			const blob = await res.blob();
+			const link = document.createElement("a");
+			link.href = URL.createObjectURL(blob);
+			link.download =
+				format === "pdf" ? `${item.title}.pdf` : `${item.title}.json`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		} catch (err) {
+			alert("Export failed!");
+		}
+		setShareMenuOpen(null);
+	};
+
+	useEffect(() => {
+		function handleClick() {
+			setShareMenuOpen(null);
+		}
+		if (shareMenuOpen) {
+			document.addEventListener("click", handleClick);
+			return () => document.removeEventListener("click", handleClick);
+		}
+	}, [shareMenuOpen]);
+
+	// 🟢 Main Render
 	return (
 		<div className="flex h-dvh flex-1 bg-white-2">
 			<div className="mx-auto flex w-11/12 max-w-6xl flex-col gap-6 pt-14 pb-10">
+				{/* Header */}
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
 						<img src="./logo-dark.svg" alt="logo" className="h-12" />
@@ -440,6 +529,7 @@ const Dashboard = () => {
 					</div>
 				</div>
 
+				{/* Filters */}
 				<div className="flex flex-col gap-4 rounded-md border border-gray-2 bg-gray-1 p-4">
 					<div className="flex flex-wrap items-center gap-4">
 						<div className="relative min-w-[240px] flex-1">
@@ -517,12 +607,14 @@ const Dashboard = () => {
 					</div>
 				</div>
 
+				{/* Error Message */}
 				{errMsg && (
 					<div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-red-600 text-sm">
 						{errMsg}
 					</div>
 				)}
 
+				{/* Prompts List */}
 				<div className="scrollbar-hide flex flex-wrap gap-4 overflow-scroll">
 					{loading ? (
 						<div className="w-full rounded-md border border-gray-200 bg-gray-50 p-10 text-center text-gray-500 text-sm">
@@ -536,7 +628,7 @@ const Dashboard = () => {
 						visiblePrompts.map((item) => (
 							<div
 								key={item.id}
-								className="group flex h-56 w-[calc(50%-0.5rem)] min-w-[300px] flex-col gap-2 overflow-hidden rounded-md border border-gray-2 bg-gray-1 p-3 transition-colors hover:border-gray-3"
+								className="group relative flex h-56 w-[calc(50%-0.5rem)] min-w-[300px] flex-col gap-2 overflow-hidden rounded-md border border-gray-2 bg-gray-1 p-3 transition-colors hover:border-gray-3"
 							>
 								<div className="flex items-start justify-between gap-2">
 									<h2 className="line-clamp-2 font-medium leading-snug">
@@ -561,6 +653,36 @@ const Dashboard = () => {
 										</button>
 										<button
 											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleShare(item.id);
+											}}
+											className="text-gray-600 hover:cursor-pointer hover:text-black"
+											title="Share"
+										>
+											<i className="ri-share-line" />
+										</button>
+										{shareMenuOpen === item.id && (
+											<div
+												className="absolute top-8 right-0 z-10 flex w-[150px] flex-col rounded border border-gray-300 bg-white p-2 shadow"
+												onClick={(e) => e.stopPropagation()}
+											>
+												<button
+													onClick={() => handleExport(item, "pdf")}
+													className="px-3 py-1 text-left text-sm hover:bg-gray-100"
+												>
+													Export as PDF
+												</button>
+												<button
+													onClick={() => handleExport(item, "json")}
+													className="px-3 py-1 text-left text-sm hover:bg-gray-100"
+												>
+													Export as JSON
+												</button>
+											</div>
+										)}
+										<button
+											type="button"
 											onClick={() => handleDelete(item)}
 											disabled={deletingId === item.id}
 											className={`text-gray-600 hover:cursor-pointer hover:text-red-600 ${deletingId === item.id ? "cursor-not-allowed opacity-50" : ""}`}
@@ -570,7 +692,7 @@ const Dashboard = () => {
 										</button>
 									</div>
 								</div>
-								<p className="scrollbar-hide flex-1 overflow-scroll font-mono text-[11px] leading-relaxed">
+								<p className="scrollbar-hide flex-1 overflow-scroll font-mono text-sm leading-relaxed">
 									{item.prompt}
 								</p>
 								<div className="flex flex-wrap items-center gap-2 pt-1">
@@ -579,11 +701,16 @@ const Dashboard = () => {
 											Community
 										</span>
 									)}
-									{item.tag && (
-										<span className="rounded-full bg-gray-3 px-2 py-0.5 font-semibold text-[10px] text-black-1 tracking-wide">
-											#{item.tag}
-										</span>
-									)}
+									{item.tags &&
+										item.tags.length > 0 &&
+										item.tags.map((tag) => (
+											<span
+												key={tag}
+												className="rounded-full bg-gray-3 px-2 py-0.5 font-semibold text-[10px] text-black-1 tracking-wide"
+											>
+												#{tag}
+											</span>
+										))}
 									<span className="ml-auto text-[10px] text-gray-500">
 										{new Date(item.createdAt).toLocaleDateString()}
 									</span>
@@ -593,6 +720,7 @@ const Dashboard = () => {
 					)}
 				</div>
 
+				{/* Edit Modal */}
 				{showEditModal && editingPrompt && (
 					<div
 						className="fixed inset-0 z-50 flex items-center justify-center"
@@ -620,7 +748,7 @@ const Dashboard = () => {
 								</h2>
 								<button
 									type="button"
-									className="text-gray-500 hover:text-black"
+									className="text-gray-500 hover:cursor-pointer hover:text-black"
 									onClick={closeEdit}
 									title="Close"
 								>
@@ -704,20 +832,28 @@ const Dashboard = () => {
 								</label>
 
 								<div className="flex flex-col gap-2">
+									{/* Tag Select/Remove */}
 									{!addingTagMode && (
-										<div className="flex items-center gap-2">
+										<div className="flex w-full flex-col flex-wrap items-center gap-2">
 											<select
-												{...register("tag")}
-												className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400"
-												defaultValue={editingPrompt.tag || ""}
+												multiple
+												{...register("tags")}
+												className="w-full flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400"
+												defaultValue={editingPrompt.tags || []}
 												onChange={(e) => {
-													if (e.target.value === "__add_new__") {
+													const selected = Array.from(
+														e.target.selectedOptions,
+													).map((opt) => opt.value);
+													setValue("tags", selected);
+													if (selected.includes("__add_new__")) {
 														setAddingTagMode(true);
-														setValue("tag", "");
+														setValue(
+															"tags",
+															selected.filter((t) => t !== "__add_new__"),
+														);
 													}
 												}}
 											>
-												<option value="">No tag</option>
 												{availableTags.map((t) => (
 													<option key={t} value={t}>
 														{t}
@@ -725,14 +861,35 @@ const Dashboard = () => {
 												))}
 												<option value="__add_new__">+ Add new tag</option>
 											</select>
-											{watch("tag") && (
-												<span className="rounded-full bg-gray-200 px-2 py-1 font-semibold text-[10px] tracking-wide">
-													#{watch("tag")}
-												</span>
-											)}
+											<div>
+												{watchTags &&
+													watchTags.length > 0 &&
+													watchTags.map((tag: string) => (
+														<span
+															key={tag}
+															className="mr-2 inline-flex items-center rounded-full bg-gray-200 px-2 py-1 font-semibold text-[10px] tracking-wide"
+														>
+															#{tag}
+															<button
+																type="button"
+																className="ml-1 text-gray-500 hover:cursor-pointer hover:text-red-500"
+																title="Remove tag"
+																onClick={() => {
+																	setValue(
+																		"tags",
+																		watchTags.filter((t: string) => t !== tag),
+																	);
+																}}
+															>
+																<i className="ri-close-line" />
+															</button>
+														</span>
+													))}
+											</div>
 										</div>
 									)}
 
+									{/* Tag Add */}
 									{addingTagMode && (
 										<div className="flex flex-col gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
 											<div className="flex items-center gap-2">
@@ -795,7 +952,8 @@ const Dashboard = () => {
 									<div className="flex flex-col text-[10px] text-gray-500">
 										<span>
 											Created:{" "}
-											{new Date(editingPrompt.createdAt).toLocaleString()}
+											{editingPrompt.createdAt &&
+												new Date(editingPrompt.createdAt).toLocaleString()}
 										</span>
 										{editingPrompt.updatedAt && (
 											<span>
@@ -803,20 +961,23 @@ const Dashboard = () => {
 												{new Date(editingPrompt.updatedAt).toLocaleString()}
 											</span>
 										)}
+										{editingPrompt.username && (
+											<span>By: {editingPrompt.username}</span>
+										)}
 									</div>
 									<div className="flex gap-2">
 										<button
 											type="button"
 											onClick={closeEdit}
-											className="rounded-md border border-gray-300 bg-white-1 px-4 py-2 font-medium text-xs transition-colors hover:bg-gray-100"
+											className="rounded-md border border-gray-300 bg-white-1 px-4 py-2 font-medium text-xs transition-colors hover:cursor-pointer hover:bg-gray-100"
 											disabled={isSubmitting}
 										>
 											Cancel
 										</button>
 										<button
 											type="submit"
-											disabled={isSubmitting || !isDirty}
-											className="rounded-md bg-black-1 px-5 py-2 font-medium text-white text-xs transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+											disabled={isSubmitting || !formChanged}
+											className="rounded-md bg-black-1 px-5 py-2 font-medium text-white text-xs transition-colors hover:cursor-pointer hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
 										>
 											{isSubmitting ? "Saving..." : "Save Changes"}
 										</button>

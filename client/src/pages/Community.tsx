@@ -8,6 +8,7 @@ type ServerPrompt = {
 	isCommunity: boolean;
 	date?: string;
 	updatedAt?: string;
+	username?: string;
 };
 
 type CommunityItem = {
@@ -16,6 +17,7 @@ type CommunityItem = {
 	prompt: string;
 	tags: string[];
 	createdAt: string;
+	username: string;
 };
 
 const API_ROOT: string =
@@ -41,6 +43,7 @@ export default function Community() {
 	const [sortKey, setSortKey] = useState<
 		"newest" | "oldest" | "title_az" | "title_za"
 	>("newest");
+	const [shareMenuOpen, setShareMenuOpen] = useState<string | null>(null);
 
 	useEffect(() => {
 		const fetchCommunity = async () => {
@@ -54,7 +57,7 @@ export default function Community() {
 			try {
 				const res = await fetch(`${API_ROOT}/prompts/community`, {
 					method: "GET",
-					credentials: "include", // remove if you make community endpoint public
+					credentials: "include",
 				});
 
 				if (res.status === 401) {
@@ -80,6 +83,7 @@ export default function Community() {
 					createdAt: p.date
 						? new Date(p.date).toISOString()
 						: new Date().toISOString(),
+					username: p.username || "unknown",
 				}));
 
 				setItems(mapped);
@@ -151,6 +155,46 @@ export default function Community() {
 			await navigator.clipboard.writeText(text);
 		} catch {}
 	};
+
+	// Show export options menu
+	const handleShare = (id: string) => {
+		setShareMenuOpen(id);
+	};
+
+	// Export prompt as PDF or JSON
+	const handleExport = async (item: CommunityItem, format: "pdf" | "json") => {
+		const url = `${API_ROOT}/prompts/export/${format}?id=${item.id}`;
+		try {
+			const res = await fetch(url, {
+				method: "GET",
+				credentials: "include",
+			});
+			if (!res.ok) return alert("Export failed!");
+
+			const blob = await res.blob();
+			const link = document.createElement("a");
+			link.href = URL.createObjectURL(blob);
+			link.download =
+				format === "pdf" ? `${item.title}.pdf` : `${item.title}.json`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		} catch (err) {
+			alert("Export failed!");
+		}
+		setShareMenuOpen(null);
+	};
+
+	// Close menu if clicked outside
+	useEffect(() => {
+		function handleClick() {
+			setShareMenuOpen(null);
+		}
+		if (shareMenuOpen) {
+			document.addEventListener("click", handleClick);
+			return () => document.removeEventListener("click", handleClick);
+		}
+	}, [shareMenuOpen]);
 
 	return (
 		<section className="flex h-dvh flex-1 bg-white-2">
@@ -256,13 +300,21 @@ export default function Community() {
 						filtered.map((item) => (
 							<div
 								key={item.id}
-								className="group flex h-56 w-[calc(50%-0.5rem)] min-w-[300px] flex-col gap-2 overflow-hidden rounded-md border border-gray-2 bg-gray-1 p-3 transition-colors hover:border-gray-3"
+								className="group relative flex h-56 w-[calc(50%-0.5rem)] min-w-[300px] flex-col gap-2 overflow-hidden rounded-md border border-gray-2 bg-gray-1 p-3 transition-colors hover:border-gray-3"
 							>
 								<div className="flex items-start justify-between gap-2">
-									<h2 className="line-clamp-2 font-medium leading-snug">
-										{item.title}
-									</h2>
-									<div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+									<div>
+										<h2 className="line-clamp-2 font-medium leading-snug">
+											{item.title}
+										</h2>
+										<p className="text-gray-500 text-xs">
+											by{" "}
+											<span className="font-semibold text-black-1">
+												@{item.username}
+											</span>
+										</p>
+									</div>
+									<div className="relative flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
 										<button
 											type="button"
 											onClick={() => copy(item.prompt)}
@@ -271,6 +323,36 @@ export default function Community() {
 										>
 											<i className="ri-file-copy-line" />
 										</button>
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleShare(item.id);
+											}}
+											className="text-gray-600 hover:cursor-pointer hover:text-black"
+											title="Share"
+										>
+											<i className="ri-share-line" />
+										</button>
+										{shareMenuOpen === item.id && (
+											<div
+												className="absolute top-8 right-0 z-10 flex w-[150px] flex-col rounded border border-gray-300 bg-white p-2 shadow"
+												onClick={(e) => e.stopPropagation()}
+											>
+												<button
+													onClick={() => handleExport(item, "pdf")}
+													className="px-3 py-1 text-left text-sm hover:bg-gray-100"
+												>
+													Export as PDF
+												</button>
+												<button
+													onClick={() => handleExport(item, "json")}
+													className="px-3 py-1 text-left text-sm hover:bg-gray-100"
+												>
+													Export as JSON
+												</button>
+											</div>
+										)}
 									</div>
 								</div>
 								<p className="scrollbar-hide flex-1 overflow-scroll font-mono text-[11px] leading-relaxed">
