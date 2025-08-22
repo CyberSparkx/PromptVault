@@ -40,7 +40,7 @@ export default function Navbar() {
 
 	return (
 		<nav
-			className={`flex h-dvh flex-col border-gray-3 border-r bg-gray-2 text-neutral-800 shadow-sm transition-[width] duration-300 ease-in-out ${
+			className={`flex min-h-screen flex-col border-gray-3 border-r bg-gray-2 text-neutral-800 shadow-sm transition-[width] duration-300 ease-in-out ${
 				isOpen ? "w-64" : "w-20"
 			}`}
 			aria-label="Primary sidebar"

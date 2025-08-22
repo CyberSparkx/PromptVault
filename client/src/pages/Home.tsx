@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { useEffect, useRef, useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 
 type FormValues = {
 	title: string;
@@ -38,6 +39,7 @@ const Home = () => {
 	const [newTag, setNewTag] = useState("");
 	const [tagError, setTagError] = useState("");
 	const newTagInputRef = useRef<HTMLInputElement | null>(null);
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		try {
@@ -248,7 +250,7 @@ const Home = () => {
 	const isCommunity = watch("isCommunity");
 
 	return (
-		<div className="flex h-dvh flex-1 bg-white-2">
+		<div className="flex min-h-screen flex-1 bg-white-2">
 			<div className="mx-auto flex w-1/2 flex-col items-center gap-5 pt-50">
 				<div className="flex items-center gap-3">
 					<img src="./logo-dark.svg" alt="logo" className="h-15" />
@@ -386,12 +388,13 @@ const Home = () => {
 					<h1 className="flex items-center justify-between text-xl">
 						<span>Recently added prompts</span>
 						{prompts.length > 4 && (
-							<a
-								href="/dashboard"
-								className="text-blue-600 text-sm hover:underline"
+							<button
+								type="button"
+								onClick={() => navigate("/dashboard")}
+								className="text-blue-600 text-sm hover:cursor-pointer hover:underline"
 							>
 								View all
-							</a>
+							</button>
 						)}
 					</h1>
 

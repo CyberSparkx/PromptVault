@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type User = {
 	id: string;
@@ -41,6 +42,7 @@ export default function Profile() {
 	const [user, setUser] = useState<User | null>(null);
 	const [prompts, setPrompts] = useState<ServerPrompt[]>([]);
 	const [logoutLoading, setLogoutLoading] = useState(false);
+	const navigate = useNavigate();
 
 	// Fetch current user from auth token endpoint
 	useEffect(() => {
@@ -198,7 +200,7 @@ export default function Profile() {
 										type="button"
 										onClick={handleLogout}
 										disabled={logoutLoading}
-										className="rounded-md bg-black-1 px-3 py-2 font-medium text-white text-xs transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+										className="rounded-md bg-black-1 px-3 py-2 font-medium text-white text-xs transition-colors hover:cursor-pointer hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
 									>
 										{logoutLoading ? "Logging out..." : "Logout"}
 									</button>
@@ -211,19 +213,25 @@ export default function Profile() {
 				</div>
 
 				<div className="grid grid-cols-3 gap-4">
-					<div className="rounded-md border border-gray-2 bg-gray-1 p-4">
+					<div
+						className="rounded-md border border-gray-2 bg-gray-1 p-4 transition-colors hover:cursor-pointer hover:border-gray-3 hover:bg-gray-2"
+						onClick={() => navigate("/dashboard")}
+					>
 						<p className="text-gray-500 text-xs">Total Prompts</p>
 						<p className="font-semibold text-3xl">
 							{loadingPrompts ? "-" : stats.total}
 						</p>
 					</div>
-					<div className="rounded-md border border-gray-2 bg-gray-1 p-4">
+					<div
+						className="rounded-md border border-gray-2 bg-gray-1 p-4 transition-colors hover:cursor-pointer hover:border-gray-3 hover:bg-gray-2"
+						onClick={() => navigate("/community")}
+					>
 						<p className="text-gray-500 text-xs">Community</p>
 						<p className="font-semibold text-3xl">
 							{loadingPrompts ? "-" : stats.community}
 						</p>
 					</div>
-					<div className="rounded-md border border-gray-2 bg-gray-1 p-4">
+					<div className="rounded-md border border-gray-2 bg-gray-1 p-4 transition-colors hover:border-gray-3 hover:bg-gray-2">
 						<p className="text-gray-500 text-xs">Tags Used</p>
 						<p className="font-semibold text-3xl">
 							{loadingPrompts ? "-" : stats.tags}
@@ -242,9 +250,7 @@ export default function Profile() {
 						</li>
 						<li className="flex items-center justify-between py-2">
 							<span>Email</span>
-							<span className="text-gray-400 text-xs">
-								Contact support to update
-							</span>
+							<span className="text-gray-400 text-xs">{user?.email}</span>
 						</li>
 					</ul>
 				</div>

@@ -78,6 +78,7 @@ const Dashboard = () => {
 	const [errMsg, setErrMsg] = useState<string>("");
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [shareMenuOpen, setShareMenuOpen] = useState<string | null>(null);
+	const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
 	const {
 		register,
@@ -496,6 +497,27 @@ const Dashboard = () => {
 		setShareMenuOpen(null);
 	};
 
+	const handleExportAll = async (format: "pdf" | "json") => {
+		const url = `${API_ROOT}/prompts/${format}`;
+		try {
+			const res = await fetch(url, {
+				method: "GET",
+				credentials: "include",
+			});
+			if (!res.ok) return alert("Export failed!");
+
+			const blob = await res.blob();
+			const link = document.createElement("a");
+			link.href = URL.createObjectURL(blob);
+			link.download = format === "pdf" ? "all-prompts.pdf" : "all-prompts.json";
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		} catch (err) {
+			alert("Export failed!");
+		}
+	};
+
 	useEffect(() => {
 		function handleClick() {
 			setShareMenuOpen(null);
@@ -506,12 +528,21 @@ const Dashboard = () => {
 		}
 	}, [shareMenuOpen]);
 
-	// 🟢 Main Render
+	useEffect(() => {
+		function handleClick() {
+			setExportMenuOpen(false);
+		}
+		if (exportMenuOpen) {
+			document.addEventListener("click", handleClick);
+			return () => document.removeEventListener("click", handleClick);
+		}
+	}, [exportMenuOpen]);
+
 	return (
 		<div className="flex h-dvh flex-1 bg-white-2">
 			<div className="mx-auto flex w-11/12 max-w-6xl flex-col gap-6 pt-14 pb-10">
 				{/* Header */}
-				<div className="flex flex-wrap items-center justify-between gap-4">
+				<div className="relative flex flex-wrap items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
 						<img src="./logo-dark.svg" alt="logo" className="h-12" />
 						<h1 className="font-normal text-4xl tracking-tight">
@@ -519,13 +550,46 @@ const Dashboard = () => {
 							<span className="text-gray-500 text-xl">/ Prompt Vault</span>
 						</h1>
 					</div>
-					<div className="flex items-center gap-3 text-gray-500 text-xs">
+					<div className="flex items-center gap-3 text-gray-500 text-md">
 						<span className="rounded-full bg-gray-2 px-3 py-1">
 							Total: {allPrompts.length}
 						</span>
 						<span className="rounded-full bg-gray-2 px-3 py-1">
 							Showing: {visiblePrompts.length}
 						</span>
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								setExportMenuOpen((prev) => !prev);
+							}}
+							className="rounded-full bg-black-1 px-3 py-1 text-white-1 hover:cursor-pointer"
+							title="Export All"
+						>
+							<i className="ri-download-2-line mr-1" />
+							Export All
+						</button>
+						{exportMenuOpen && (
+							<div
+								className="absolute top-8 right-0 z-10 flex w-[170px] flex-col rounded border border-gray-300 bg-white p-2 shadow"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<button
+									type="button"
+									onClick={() => handleExportAll("pdf")}
+									className="px-3 py-1 text-left text-sm hover:cursor-pointer hover:bg-gray-100"
+								>
+									Export All as PDF
+								</button>
+								<button
+									type="button"
+									onClick={() => handleExportAll("json")}
+									className="px-3 py-1 text-left text-sm hover:cursor-pointer hover:bg-gray-100"
+								>
+									Export All as JSON
+								</button>
+							</div>
+						)}{" "}
 					</div>
 				</div>
 
