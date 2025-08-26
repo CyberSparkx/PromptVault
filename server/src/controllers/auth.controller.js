@@ -40,10 +40,10 @@ const registerController = async (req, res) => {
 
 		// Save token in cookie
 		res.cookie("token", token, {
-			httpOnly: true, // prevents JS access
-			secure: process.env.NODE_ENV === "production", // HTTPS only in prod
-			sameSite: "lax", // works well across localhost ports
-			maxAge: 24 * 60 * 60 * 1000, // 1 day
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production" ? true : false,
+			sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+			maxAge: 24 * 60 * 60 * 1000,
 			path: "/",
 		});
 
@@ -174,4 +174,3 @@ module.exports = {
 	loginController,
 	logoutController,
 };
-
