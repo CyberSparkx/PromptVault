@@ -6,7 +6,6 @@ const registerController = async (req, res) => {
 	try {
 		const { username, email, password } = req.body;
 
-		// Check for existing user
 		const existingUser = await User.findOne({ $or: [{ username }, { email }] });
 		if (existingUser) {
 			return res
@@ -14,13 +13,11 @@ const registerController = async (req, res) => {
 				.json({ message: "Username or Email already exists" });
 		}
 
-		// Hash password
 		const hashedPassword = await bcrypt.hash(password, 10);
 		if (!hashedPassword) {
 			return res.status(500).json({ message: "Something Went Wrong" });
 		}
 
-		// Create new user
 		const newUser = new User({
 			username,
 			email,
@@ -31,25 +28,23 @@ const registerController = async (req, res) => {
 
 		await newUser.save();
 
-		// Generate JWT (include email for consistency)
 		const token = jwt.sign(
 			{ id: newUser._id, username: newUser.username, email: newUser.email },
 			process.env.JWT_SECRET,
 			{ expiresIn: "1d" },
 		);
 
-		// Save token in cookie
 		res.cookie("token", token, {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production" ? true : false,
-			sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+			secure: process.env.NODE_ENV === "production",
+			sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 			maxAge: 24 * 60 * 60 * 1000,
 			path: "/",
+			...(process.env.NODE_ENV === "production" && { partitioned: true }),
 		});
 
 		res.status(201).json({
 			message: "User registered successfully",
-			// token: token, // optional: better not to return token in body
 			user: {
 				id: newUser._id,
 				username: newUser.username,
@@ -66,10 +61,8 @@ const registerController = async (req, res) => {
 
 const loginWithToken = async (req, res) => {
 	try {
-		// verifyToken sets req.user from JWT payload
 		const { id, username, email } = req.user || {};
 
-		// If email missing in token (older tokens), fetch from DB
 		let finalEmail = email;
 		if (!finalEmail && id) {
 			const dbUser = await User.findById(id).select("email username");
@@ -79,7 +72,7 @@ const loginWithToken = async (req, res) => {
 		}
 
 		if (!id || !username) {
-			return res.status(401).json({ message: "Invalid session" });
+			return res.json({ message: "Invalid session" });
 		}
 
 		return res.json({
@@ -106,7 +99,6 @@ const loginController = async (req, res) => {
 				.json({ message: "Username/Email and password required" });
 		}
 
-		// Check for existing user by username or email
 		const existingUser = await User.findOne({
 			$or: [{ username }, { email }],
 		});
@@ -115,7 +107,6 @@ const loginController = async (req, res) => {
 			return res.status(400).json({ message: "Invalid credentials" });
 		}
 
-		// Compare password
 		const isPasswordValid = await bcrypt.compare(
 			password,
 			existingUser.password,
@@ -124,7 +115,6 @@ const loginController = async (req, res) => {
 			return res.status(400).json({ message: "Invalid credentials" });
 		}
 
-		// Create JWT token (include email)
 		const token = jwt.sign(
 			{
 				id: existingUser._id,
@@ -135,13 +125,13 @@ const loginController = async (req, res) => {
 			{ expiresIn: "1d" },
 		);
 
-		// Store token in HTTP-only cookie
 		res.cookie("token", token, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-			maxAge: 24 * 60 * 60 * 1000, // 1 day
+			sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+			maxAge: 24 * 60 * 60 * 1000,
 			path: "/",
+			...(process.env.NODE_ENV === "production" && { partitioned: true }),
 		});
 
 		return res.status(200).json({
@@ -161,9 +151,10 @@ const loginController = async (req, res) => {
 const logoutController = (req, res) => {
 	res.clearCookie("token", {
 		httpOnly: true,
-		sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
 		secure: process.env.NODE_ENV === "production",
+		sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 		path: "/",
+		...(process.env.NODE_ENV === "production" && { partitioned: true }),
 	});
 	return res.json({ message: "Logged out" });
 };
