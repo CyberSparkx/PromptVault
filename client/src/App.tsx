@@ -3,7 +3,7 @@ import Router from "./components/Router";
 
 function App() {
 	return (
-		<div className="flex font-cabinet selection:bg-gray-5 selection:text-white-1">
+		<div className="flex font-montserrat selection:bg-gray-5 selection:text-white-1">
 			<Navbar />
 			<Router />
 		</div>

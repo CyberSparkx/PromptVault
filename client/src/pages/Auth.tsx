@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 type Props = { mode: "login" | "signup" };
 
 type LoginValues = {
-	identifier: string; // username ya email
+	identifier: string;
 	password: string;
 };
 
